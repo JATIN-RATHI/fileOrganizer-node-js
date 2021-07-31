@@ -1,83 +1,79 @@
-let a = "Organize command executed with path -> ";
-let itsPath = process.cwd();
+let fs = require("fs");
+let path = require("path");
 let types = {
-    media : ["mp4", "jpeg", "jpg", "png"],
-    archives : ["zip", "tar", "iso"],
-    documents : ["pdf", "docx", "doc", "xls", "pptx", "ppt"],
-    app : ["exe"]
+    media: ["mp4", "mkv"],
+    archives: ['zip', '7z', 'rar', 'tar', 'gz', 'ar', 'iso', "xz"],
+    documents: ['docx', 'doc', 'pdf', 'xlsx', 'xls', 'odt', 'ods', 'odp', 'odg', 'odf', 'txt', 'ps', 'tex'],
+    app: ['exe', 'dmg', 'pkg', "deb"]
 }
-function fn(address)
-{
-    let fs = require("fs");
-    let path = require("path");
-    let folderfiles = fs.readdirSync(address);
-    // console.log(folderfiles);
-    fs.mkdirSync("Media");
-    fs.mkdirSync("Archives");
-    fs.mkdirSync("Documents");
-    fs.mkdirSync("Apps");
-    fs.mkdirSync("Others");
-    let mediaPath = path.join(address, "Media");
-    let archivePath = path.join(address, "Archives");
-    let docPath = path.join(address, "Documents");
-    let appPath = path.join(address, "Apps");
-    let othersPath = path.join(address, "Others");
-    
-    for(let i = 0; i < folderfiles.length; i++)
-    {
-        let extension = folderfiles[i].split(".");
-        // console.log(folderfiles[i] + "  ->  " + extension + " types -> ");
-        for (let [key, value] of Object.entries(types)) {
-            for(let j = 0; j < value.length; j++)
-            {
-                let srcPath = path.join(address, folderfiles[i]);
-                if(extension[1] == value[j])
-                {
-                    // console.log(folderfiles[i] + " -> " + extension[1] + " -> " + value[j]);
-                    switch(key)
-                    {
-                        case "media":
-                        {
-                            let destPath = path.join(mediaPath, folderfiles[i]);
-                            fs.copyFileSync(srcPath, destPath);
-                            fs.unlinkSync(srcPath);
-                            break;
-                        }
-                        case "archives":
-                        {
-                            let destPath = path.join(archivePath, folderfiles[i]);
-                            fs.copyFileSync(srcPath, destPath);
-                            fs.unlinkSync(srcPath);
-                            break;
-                        }
-                        case "documents":
-                        {
-                            let destPath = path.join(docPath, folderfiles[i]);
-                            fs.copyFileSync(srcPath, destPath);
-                            fs.unlinkSync(srcPath);
-                            break;
-                        }
-                        case "apps":
-                        {
-                            let destPath = path.join(appPath, folderfiles[i]);
-                            fs.copyFileSync(srcPath, destPath);
-                            fs.unlinkSync(srcPath);
-                            break;
-                        }
-                        default:
-                        {
-                            let destPath = path.join(othersPath, folderfiles[i]);
-                            fs.copyFileSync(srcPath, destPath);
-                            fs.unlinkSync(srcPath);
-                            break;
-                        }
-                    }
-                }
+function organizeFn(dirPath) {
+    // console.log("organize command implemnted for ", dirPath);
+    // 1. input -> directory path given
+    let destPath;
+    if (dirPath == undefined) {
+        destPath = process.cwd();
+        return;
+    } else {
+        let doesExist = fs.existsSync(dirPath);
+        if (doesExist) {
+
+            // 2. create -> organized_files -> directory
+            destPath = path.join(dirPath, "organized_files");
+            if (fs.existsSync(destPath) == false) {
+                fs.mkdirSync(destPath);
             }
-          }    
+
+        } else {
+
+            console.log("Kindly enter the correct path");
+            return;
+        }
+    }
+    organizeHelper(dirPath, destPath);
+    // 3. identify categories of all the files present in that input directory  ->
+}
+function organizeHelper(src, dest) {
+    // 3. identify categories of all the files present in that input directory  ->
+    let childNames = fs.readdirSync(src);
+    // console.log(childNames);
+    for (let i = 0; i < childNames.length; i++) {
+        let childAddress = path.join(src, childNames[i]);
+        let isFile = fs.lstatSync(childAddress).isFile();
+        if (isFile) {
+            // console.log(childNames[i]);
+            let category = getCategory(childNames[i]);
+            // console.log(childNames[i], "belongs to --> ", category);
+            // 4. copy / cut  files to that organized directory inside of any of category folder 
+            sendFiles(childAddress, dest, category);
+        }
     }
 }
+function sendFiles(srcFilePath, dest, category) {
+    // 
+    let categoryPath = path.join(dest, category);
+    if (fs.existsSync(categoryPath) == false) {
+        fs.mkdirSync(categoryPath);
+    }
+    let fileName = path.basename(srcFilePath);
+    let destFilePath = path.join(categoryPath, fileName);
+    fs.copyFileSync(srcFilePath, destFilePath);
+    fs.unlinkSync(srcFilePath);
+    console.log(fileName, "copied to ", category);
+
+}
+function getCategory(name) {
+    let ext = path.extname(name);
+    ext = ext.slice(1);
+    for (let type in types) {
+        let cTypeArray = types[type];
+        for (let i = 0; i < cTypeArray.length; i++) {
+            if (ext == cTypeArray[i]) {
+                return type;
+            }
+        }
+    }
+    return "others";
+}
 module.exports = {
-    varName : a+itsPath,
-    func : fn
+    func: organizeFn
 }
